@@ -239,7 +239,7 @@
                 <form id="send-form" class="space-y-6">
                     <div>
                         <label for="send-phone" class="block text-sm font-medium text-gray-700">Recipient Phone Number</label>
-                        <input type="tel" id="send-phone" name="recipientPhone" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3" placeholder="e.g., +2348012345678 or 08012345678" aria-describedby="send-phone-error">
+                        <input type="tel" id="send-phone" name="recipientPhone" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-3" placeholder="e.g., +918012345678 or 08012345678" aria-describedby="send-phone-error">
                         <p id="send-phone-error" class="text-xs text-red-500 mt-1 hidden"></p>
                     </div>
                     <div>
@@ -458,6 +458,12 @@
         document.getElementById('phone-number').textContent = user.phoneNumber;
         document.getElementById('user-id-display').textContent = user.id;
 
+        // Keep settings section in sync so it doesn't stay on "Loading..."
+        document.getElementById('settings-phone').textContent = user.phoneNumber || 'N/A';
+        document.getElementById('settings-email').textContent = user.email || 'Not provided';
+        document.getElementById('settings-user-id').textContent = user.id || 'N/A';
+        document.getElementById('settings-wallet-id').textContent = user.walletId || 'N/A';
+
         console.log('User info loaded successfully:', user.phoneNumber);
 
     } catch (error) {
@@ -473,6 +479,10 @@
                 document.getElementById('user-info').textContent = `User: ${userId.substring(0, 8)}...`;
                 document.getElementById('phone-number').textContent = 'Phone number not available';
                 document.getElementById('user-id-display').textContent = userId;
+                document.getElementById('settings-phone').textContent = 'Phone number not available';
+                document.getElementById('settings-email').textContent = 'Not available';
+                document.getElementById('settings-user-id').textContent = userId;
+                document.getElementById('settings-wallet-id').textContent = 'Not available';
             } else {
                 throw new Error('Could not extract user info from token');
             }
@@ -762,6 +772,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Step 1: Loading user info...');
         await loadUserInfo();
 
+        // Preload settings block data as well.
+        await loadSettingsData();
+
         console.log('Step 2: Fetching dashboard data...');
         await fetchDashboardData(); // This runs loadWalletBalance → loadTransactionHistory sequentially
 
@@ -903,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cleanPhoneNumber = receiverPhoneNumber.replace(/\s/g, '');
 
-        if (!/^(\+?234|0)[789][01]\d{8}$/.test(cleanPhoneNumber)) {
+        if (!/^(?:\+91|91|0)[6-9]\d{9}$/.test(cleanPhoneNumber)) {
             setFormError('send-phone', 'Invalid SwiftPay phone number format.');
             return;
             }

@@ -211,7 +211,7 @@ public void autoCompletePendingTransactions() {
 │  (₹10,000)   │                           │  (₹5,000)    │
 └──────┬───────┘                           └──────────────┘
        │ 1. POST /api/v1/transfers
-       │    {amount: 3000, receiver: "234..."}
+       │    {amount: 3000, receiver: "91..."}
        ▼
 ┌─────────────────────┐
 │ Transfer Service    │
@@ -244,7 +244,7 @@ public void autoCompletePendingTransactions() {
 │  (₹100,000)  │                           │  (₹20,000)   │
 └──────┬───────┘                           └──────────────┘
        │ 1. POST /api/v1/transfers
-       │    {amount: 60000, receiver: "234..."}
+       │    {amount: 60000, receiver: "91..."}
        ▼
 ┌─────────────────────┐
 │ Transfer Service    │
@@ -725,8 +725,8 @@ POST /api/v1/register
 Content-Type: application/json
 
 {
-  "phoneNumber": "2348012345678",
-  "pin": "1234"
+  "phoneNumber": "91801915678",
+  "pin": "191"
 }
 ```
 
@@ -734,7 +734,7 @@ Content-Type: application/json
 ```json
 {
   "userId": "uuid-here",
-  "phoneNumber": "2348012345678",
+  "phoneNumber": "91801915678",
   "walletId": "wallet-uuid-here",
   "balance": 0.00,
   "message": "User registered successfully"
@@ -747,7 +747,7 @@ POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "phoneNumber": "+2347030834157",
+  "phoneNumber": "+917030834157",
   "pin": "7789"
 }
 ```
@@ -757,7 +757,7 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "userId": "uuid-here",
-  "phoneNumber": "+2347030834157",
+  "phoneNumber": "+917030834157",
   "expiresIn": 86400000
 }
 ```
@@ -773,7 +773,7 @@ Authorization: Bearer {jwt_token}
 Content-Type: application/json
 
 {
-  "receiverPhoneNumber": "2347030834157",
+  "receiverPhoneNumber": "917030834157",
   "amount": 500.50,
   "securePin": "7789",
   "narration": "Dinner reimbursement"
@@ -849,7 +849,7 @@ Content-Type: application/json
   "status": "success",
   "message": "✅ Deposit successful for wallet: c2df2774-04dd-4fd2-9d84-232ee9097dea",
   "authorizationUrl": "https://paystack.com/pay/xyz123",
-  "reference": "TXN_REF_12345"
+  "reference": "TXN_REF_1915"
 }
 ```
 
@@ -1205,7 +1205,7 @@ View report at: `target/site/jacoco/index.html`
 curl -X POST http://localhost:8081/api/v1/transfers \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"receiverPhoneNumber": "2347030834157", "amount": 60000, "securePin": "7789", "narration": "Escrow test"}'
+  -d '{"receiverPhoneNumber": "917030834157", "amount": 60000, "securePin": "7789", "narration": "Escrow test"}'
 
 # Test cancellation
 curl -X POST http://localhost:8081/api/v1/transfers/$TRANSACTION_ID/cancel \
@@ -1302,10 +1302,10 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 For issues, questions, or contributions:
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/ppps/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/ppps/discussions)
-- **Email**: Dotunm85@gmail.com
-- **Phone**: +2347030834157
+- **Issues**: [GitHub Issues](https://github.com/netsfreak/ppps/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/netsfreak/ppps/discussions)
+- **Email**: snghshreedhar@gmail.com
+- **Phone**: +917718076213
 
 ---
 

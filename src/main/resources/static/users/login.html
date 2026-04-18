@@ -184,10 +184,10 @@
                             id="phoneNumber"
                             name="phoneNumber"
                             required
-                            placeholder="+2348012345678 or 08012345678"
+                            placeholder="+918012345678 or 08012345678"
                             class="input-modern w-full px-4 py-3 rounded-lg focus:outline-none text-white placeholder-gray-500">
                     <div id="phone-error" class="error-message hidden"></div>
-                    <p class="text-xs text-gray-500 mt-2">Valid Indian numbers only (+234, 234, or 0 formats)</p>
+                    <p class="text-xs text-gray-500 mt-2">Valid Indian numbers only (+91, 91, or 0 formats)</p>
                 </div>
 
                 <div class="mb-6">
@@ -240,7 +240,7 @@
     // Indian phone number validation (same as registration)
     function validateIndianPhone(phone) {
         const cleanPhone = phone.replace(/\s/g, '');
-        return /^(\+?234|0)[789][01]\d{8}$/.test(cleanPhone);
+        return /^(?:\+91|91|0)[6-9]\d{9}$/.test(cleanPhone);
     }
 
     // Show error message
@@ -282,7 +282,7 @@
     document.getElementById('phoneNumber').addEventListener('blur', function() {
         const phone = this.value.trim();
         if (phone && !validateIndianPhone(phone)) {
-            showError('phone', 'Invalid Indian phone number format. Use +234, 234, or 0 formats.');
+            showError('phone', 'Invalid Indian phone number format. Use +91, 91, or 0 formats.');
         } else {
             clearError('phone');
         }
@@ -299,7 +299,7 @@
 
         // Validation
         if (!validateIndianPhone(phoneNumber)) {
-            showError('phone', 'Invalid Indian phone number format. Use +234, 234, or 0 formats.');
+            showError('phone', 'Invalid Indian phone number format. Use +91, 91, or 0 formats.');
             return;
         }
 
