@@ -332,168 +332,191 @@ public void autoCompletePendingTransactions() {
 
 ## 🏗️ Architecture
 
-### **Enhanced Escrow Architecture**
+### **Target Microservices Architecture**
+
+This project now follows a **microservices target design** with clear domain boundaries.  
+Each service owns its own data and communicates through **HTTP (sync)** and **Kafka (async)**.
 
 ```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ POST /api/v1/transfers
-       ▼
-┌─────────────────────────────┐
-│   TransferController        │
-│  (JWT Authentication)       │
-└──────────┬──────────────────┘
-           │
-           ▼
-┌─────────────────────────────┐
-│    TransferService          │
-│  @Transactional             │
-├─────────────────────────────┤
-│ 1. Check Amount             │───► ≥₹50,000 → Escrow Flow
-│ 2. Lock Wallets             │
-│ 3. Verify Balance           │
-│ 4. Verify PIN               │
-│ 5. Process Based on Type:   │
-│    • Instant: Full transfer │
-│    • Escrow: Fee only       │
-│ 6. Create Transaction       │
-│ 7. Log to Ledger            │
-│ 8. Commit Transaction       │
-└──────────┬──────────────────┘
-           │
-           │ afterCommit()
-           ▼
-┌─────────────────────────────┐
-│   Kafka Producer            │
-│  TransactionCompletedEvent  │
-└──────────┬──────────────────┘
-           │
-           │ Publish to Topic
-           ▼
-┌─────────────────────────────────────────────────┐
-│            Apache Kafka Cluster                 │
-│  Topic: transactions.completed                  │
-│  Topic: withdrawal.completed                    │
-└──────────┬──────────────────────────────────────┘
-           │
-           │ Subscribe
-           ▼
-┌──────────────────────────────────────────────────┐
-│         Kafka Consumer Services                  │
-├──────────────────────────────────────────────────┤
-│  📧 NotificationService                          │
-│  📊 AnalyticsService                             │
-│  🔍 AuditService                                 │
-│  ⏰ EscrowService (Scheduled)                    │───► Auto-completes escrow
-└──────────────────────────────────────────────────┘
+                           Clients (Web / Mobile / Admin)
+                                      │
+                                      ▼
+                      ┌───────────────────────────────────┐
+                      │            API Gateway            │
+                      │ AuthN, routing, rate limit, CORS │
+                      └──────┬──────────────┬─────────────┘
+                             │              │
+                 Sync HTTP   │              │   Sync HTTP
+                             ▼              ▼
+             ┌──────────────────────┐   ┌──────────────────────┐
+             │     Auth Service     │   │     User Service     │
+             │ JWT, credentials, RBAC│  │ profile, KYC, prefs  │
+             └──────────┬───────────┘   └──────────┬───────────┘
+                        │                           │
+                        └──────────┬────────────────┘
+                                   │
+                                   ▼
+                        ┌──────────────────────┐
+                        │   Payment Service    │
+                        │ transfer orchestration│
+                        │ escrow policies/saga │
+                        └───────┬──────────────┘
+                                │ calls
+                                ▼
+                        ┌──────────────────────┐
+                        │    Wallet Service    │
+                        │ balances + ledger    │
+                        └───────┬──────────────┘
+                                │
+                 External APIs  │
+      ┌─────────────────────────▼───────────────────────────────┐
+      │                  Funding Service                        │
+      │ deposits, withdrawals, webhook reconciliation           │
+      └─────────────────────────┬───────────────────────────────┘
+                                │ events
+                                ▼
+                        ┌──────────────────────┐
+                        │       Kafka          │
+                        │ domain event bus     │
+                        └───────┬──────────────┘
+                                │
+      ┌─────────────────────────┼───────────────────────────────┐
+      ▼                         ▼                               ▼
+┌───────────────┐       ┌────────────────┐             ┌────────────────┐
+│Notification Svc│      │   Audit Svc    │             │ Analytics Svc  │
+│email/SMS/push  │      │ immutable trail│             │ reports/metrics│
+└────────────────┘      └────────────────┘             └────────────────┘
 ```
 
-### **Escrow Service Components**
+### **Service Boundaries and Ownership**
 
-```java
-@Service
-public class EscrowService {
-    
-    // Check if transfer requires escrow
-    public boolean requiresEscrow(BigDecimal amount) {
-        return amount.compareTo(new BigDecimal("50000.00")) >= 0;
-    }
-    
-    // Auto-complete pending transactions every minute
-    @Scheduled(fixedRate = 60000)
-    public void autoCompletePendingTransactions() {
-        // Complete transactions older than 30 minutes
-    }
-    
-    // Cancel escrow transaction
-    public void cancelEscrowTransaction(UUID transactionId, UUID senderWalletId) {
-        // Validate ownership and time window
-        // Update status to CANCELLED
-        // Refund principal + fee
-    }
-}
+| Service | Primary Responsibilities | Owns Data |
+|---------|---------------------------|-----------|
+| `api-gateway` | Auth validation, route aggregation, throttling | none |
+| `auth-service` | Login, token issuance, role checks | auth users, credentials, sessions |
+| `user-service` | Profile, KYC metadata, account settings | user profile tables |
+| `wallet-service` | Wallet balances, ledger entries, holds | wallets, ledger, balance snapshots |
+| `payment-service` | Transfer lifecycle, escrow states, idempotency, saga coordinator | transfers, escrow state, outbox |
+| `funding-service` | Deposit/withdraw workflows, gateway/webhook integration | funding txns, webhook logs |
+| `notification-service` | Event-based notifications | templates, delivery log |
+| `audit-service` | Compliance-grade event/audit storage | audit records |
+| `analytics-service` | Aggregations, BI-friendly views | analytics projections |
+
+### **Core Integration Contracts**
+
+- `payment-service -> wallet-service`:
+  - `POST /internal/wallets/{id}/debit`
+  - `POST /internal/wallets/{id}/credit`
+  - `POST /internal/wallets/{id}/hold`
+  - `POST /internal/wallets/{id}/release-hold`
+- `funding-service -> wallet-service`:
+  - `POST /internal/wallets/{id}/deposit`
+  - `POST /internal/wallets/{id}/withdraw`
+- Kafka domain topics:
+  - `payment.transfer.initiated`
+  - `payment.transfer.completed`
+  - `payment.transfer.failed`
+  - `payment.escrow.created`
+  - `payment.escrow.completed`
+  - `funding.deposit.completed`
+  - `funding.withdrawal.completed`
+
+### **Reliability Patterns for Money Movement**
+
+- **Outbox Pattern** in `payment-service`, `wallet-service`, and `funding-service` to avoid DB/Kafka dual-write issues.
+- **SAGA orchestration** in `payment-service` for cross-service transfer and escrow lifecycle.
+- **Idempotency keys** for client transfer and funding requests.
+- **Exactly-once effect** at domain level using deduplication tables + immutable ledger entries.
+- **Compensation flows** (reverse debit/release hold/refund fee) for partial failure scenarios.
+
+### **Data and Transaction Rules**
+
+- Each microservice has a **separate database schema** (or separate DB instance in production).
+- No service performs direct SQL into another service's database.
+- Financial source of truth stays in `wallet-service` ledger tables.
+- Cross-service consistency is eventually consistent via events; strict ACID remains inside each service only.
+
+### **Deployment Blueprint**
+
+- Keep the existing Spring Boot app as a **strangler gateway** during migration.
+- Run the first extracted services in parallel using Docker Compose.
+- Add centralized observability:
+  - OpenTelemetry tracing
+  - Prometheus metrics
+  - Correlation IDs across gateway, service calls, and Kafka messages
+
+### **Phased Migration Plan (from current codebase)**
+
+1. **Phase 0 - Modular Monolith Hardening**
+   - Keep current package boundaries strict (`auth`, `user`, `wallet`, `payment`, `funding`).
+   - Introduce outbox tables and idempotency keys in the monolith first.
+2. **Phase 1 - Extract `notification-service` and `audit-service`**
+   - Lowest risk; event-only consumers.
+   - Keep existing Kafka topics and route events externally.
+3. **Phase 2 - Extract `funding-service`**
+   - Move webhook and gateway integrations out of core transfer flow.
+   - Keep wallet writes via internal API calls.
+4. **Phase 3 - Extract `wallet-service`**
+   - Move ledger and balance APIs behind service boundary.
+   - Treat wallet ledger as financial source of truth.
+5. **Phase 4 - Extract `payment-service`**
+   - Move transfer + escrow orchestration and saga logic.
+   - API Gateway routes `/transfers/**` to `payment-service`.
+6. **Phase 5 - Extract `auth-service` and `user-service`**
+   - Complete decoupling and retire monolith modules.
+
+### **Current-to-Target Mapping**
+
+| Current Module/Class Area | Target Service |
+|---------------------------|----------------|
+| `controller/AuthenticationController`, JWT config | `auth-service` |
+| `controller/UserController`, `service/UserService` | `user-service` |
+| `service/BalanceService`, wallet repositories, ledger repositories | `wallet-service` |
+| `service/TransferService`, `service/EscrowService`, transfer controllers | `payment-service` |
+| `service/GatewayService`, `service/WebhookService`, withdrawal/funding controllers | `funding-service` |
+| `service/TransactionNotificationService` | `notification-service` |
+| audit endpoints/logging flow | `audit-service` |
+
+### **Full Migration Implementation Status**
+
+All migration phases are now represented as independent services in this repository:
+
+- `services/api-gateway` - entry point and route orchestration
+- `services/auth-service` - authentication and token issuance endpoints
+- `services/user-service` - user profile management endpoints
+- `services/wallet-service` - wallet ledger and internal debit/credit APIs
+- `services/payment-service` - transfer orchestration + transaction event publishing
+- `services/funding-service` - deposit/withdraw orchestration + funding event publishing
+- `services/notification-service` - event-driven notification consumer
+- `services/audit-service` - event-driven audit consumer
+
+Run the full microservices stack:
+
+```bash
+docker compose up -d --build
 ```
 
-### **System Architecture Diagram**
+Core service health checks:
 
-```
-                    External Payment Gateways
-┌─────────────────────────────────────────────────────────────┐
-│  🏦 Paystack  │  🏦 Flutterwave  │  🏦 Bank APIs           │
-│  (Card/Bank)  │  (Card/Bank)     │  (Direct Transfer)      │
-└────────┬──────┴─────────┬────────┴──────────┬──────────────┘
-         │                │                    │
-         │ Webhook/API    │ Webhook/API        │ Callback
-         ▼                ▼                    ▼
-┌──────────────────────────────────────────────────────────────┐
-│                      API Gateway Layer                       │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────┐│
-│  │   Auth     │  │  Transfer  │  │ Withdrawal │  │Funding ││
-│  │ Controller │  │ Controller │  │ Controller │  │Control.││
-│  └──────┬─────┘  └──────┬─────┘  └──────┬─────┘  └───┬────┘│
-└─────────┼────────────────┼────────────────┼─────────────┼────┘
-          │                │                │             │
-          ▼                ▼                ▼             ▼
-┌──────────────────────────────────────────────────────────────┐
-│                   Security Filter Chain                       │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │    JWT     │  │ Rate Limit │  │   CORS     │            │
-│  │   Filter   │  │   Filter   │  │   Filter   │            │
-│  └────────────┘  └────────────┘  └────────────┘            │
-└──────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌──────────────────────────────────────────────────────────────┐
-│                     Service Layer                             │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────┐│
-│  │  Transfer  │  │ Withdrawal │  │   Wallet   │  │Funding ││
-│  │  Service   │  │  Service   │  │  Service   │  │Service ││
-│  └──────┬─────┘  └──────┬─────┘  └──────┬─────┘  └───┬────┘│
-└─────────┼────────────────┼────────────────┼─────────────┼────┘
-          │                │                │             │
-          │   @Transactional (ACID)         │             │
-          ▼                ▼                ▼             ▼
-┌──────────────────────────────────────────────────────────────┐
-│                  Repository Layer (JPA)                       │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │  Wallet    │  │Transaction │  │   Ledger   │            │
-│  │ Repository │  │ Repository │  │ Repository │            │
-│  └──────┬─────┘  └──────┬─────┘  └──────┬─────┘            │
-└─────────┼────────────────┼────────────────┼──────────────────┘
-          │                │                │
-          ▼                ▼                ▼
-┌──────────────────────────────────────────────────────────────┐
-│                   PostgreSQL Database                         │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │  wallets   │  │transactions│  │  ledgers   │            │
-│  │   users    │  │   events   │  │   logs     │            │
-│  └────────────┘  └────────────┘  └────────────┘            │
-└──────────────────────────────────────────────────────────────┘
+- API Gateway: `http://localhost:8080/actuator/health`
+- Auth: `http://localhost:9081/actuator/health`
+- User: `http://localhost:9082/actuator/health`
+- Wallet: `http://localhost:9083/actuator/health`
+- Payment: `http://localhost:9084/actuator/health`
+- Funding: `http://localhost:9085/actuator/health`
+- Notification: `http://localhost:9091/actuator/health`
+- Audit: `http://localhost:9092/actuator/health`
 
-          ┌─────────────────────────────────┐
-          │    Redis Cache (Rate Limits)    │
-          └─────────────────────────────────┘
+Gateway entry examples:
 
-┌──────────────────────────────────────────────────────────────┐
-│                      Apache Kafka                             │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │  Topic: transactions.completed                         │  │
-│  │  Topic: withdrawal.completed                           │  │
-│  │  Topic: deposit.completed                              │  │
-│  │  Topic: user.notifications                             │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────┬───────────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────────────────────┐
-│                   Consumer Services                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │Notification│  │ Analytics  │  │   Audit    │            │
-│  │  Service   │  │  Service   │  │  Service   │            │
-│  └────────────┘  └────────────┘  └────────────┘            │
-└──────────────────────────────────────────────────────────────┘
-```
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/users`
+- `GET /api/v1/users/{userId}`
+- `POST /api/v1/funding/deposits`
+- `POST /api/v1/funding/withdrawals`
+- `POST /api/v1/transfers`
+- `GET /api/v1/wallets/{walletId}/balance`
 
 ---
 
