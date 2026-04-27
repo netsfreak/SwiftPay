@@ -68,6 +68,110 @@ services:
       - "9094:9094"
     restart: always
 
+  # =====================
+  # Phase 1 Microservices
+  # =====================
+  notification-service:
+    build:
+      context: ./services/notification-service
+    container_name: ppps-notification-service
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP: notification-service-group
+    ports:
+      - "9091:9091"
+    restart: always
+
+  audit-service:
+    build:
+      context: ./services/audit-service
+    container_name: ppps-audit-service
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP: audit-service-group
+    ports:
+      - "9092:9092"
+    restart: always
+
+  # =====================
+  # Core Microservices
+  # =====================
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    container_name: ppps-api-gateway
+    depends_on:
+      - auth-service
+      - user-service
+      - wallet-service
+      - payment-service
+      - funding-service
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:9081
+      USER_SERVICE_URL: http://user-service:9082
+      WALLET_SERVICE_URL: http://wallet-service:9083
+      PAYMENT_SERVICE_URL: http://payment-service:9084
+      FUNDING_SERVICE_URL: http://funding-service:9085
+    ports:
+      - "8080:8080"
+    restart: always
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    container_name: ppps-auth-service
+    ports:
+      - "9081:9081"
+    restart: always
+
+  user-service:
+    build:
+      context: ./services/user-service
+    container_name: ppps-user-service
+    ports:
+      - "9082:9082"
+    restart: always
+
+  wallet-service:
+    build:
+      context: ./services/wallet-service
+    container_name: ppps-wallet-service
+    ports:
+      - "9083:9083"
+    restart: always
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+    container_name: ppps-payment-service
+    depends_on:
+      - kafka
+      - wallet-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      WALLET_SERVICE_URL: http://wallet-service:9083
+    ports:
+      - "9084:9084"
+    restart: always
+
+  funding-service:
+    build:
+      context: ./services/funding-service
+    container_name: ppps-funding-service
+    depends_on:
+      - kafka
+      - wallet-service
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      WALLET_SERVICE_URL: http://wallet-service:9083
+    ports:
+      - "9085:9085"
+    restart: always
+
 # =====================
 # Persistent Volumes
 # =====================
