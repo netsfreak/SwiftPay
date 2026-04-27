@@ -26,7 +26,7 @@
         <java.version>21</java.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <spring-boot-admin.version>3.3.4</spring-boot-admin.version>
     </properties>
     <dependencies>

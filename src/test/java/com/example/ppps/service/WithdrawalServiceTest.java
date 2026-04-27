@@ -1,7 +1,12 @@
 package com.example.ppps.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.example.ppps.event.LedgerEventPublisher;
 import com.example.ppps.exception.PppsException;
 import com.example.ppps.repository.*;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -10,27 +15,29 @@ import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 class WithdrawalServiceTest {
 
     @Mock
     private WalletRepository walletRepository;
+
     @Mock
     private TransactionRepository transactionRepository;
-    @Mock
-    private LedgerEntryRepository ledgerEntryRepository;
+
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private LedgerEventPublisher ledgerEventPublisher;
+
     @Mock
     private FeeService feeService;
+
     @Mock
     private GatewayService gatewayService;
+
     @Mock
     private KafkaTemplate<String, Object> kafkaTemplate;
+
     @Mock
     private PasswordEncoder passwordEncoder;
 
@@ -40,15 +47,15 @@ class WithdrawalServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         withdrawalService = new WithdrawalService(
-                walletRepository,
-                transactionRepository,
-                ledgerEntryRepository,
-                userRepository,
-                feeService,
-                gatewayService,
-                kafkaTemplate,
-                passwordEncoder,
-                UUID.randomUUID().toString()  // dummy platform wallet ID
+            walletRepository,
+            transactionRepository,
+            userRepository,
+            feeService,
+            gatewayService,
+            kafkaTemplate,
+            passwordEncoder,
+            ledgerEventPublisher,
+            UUID.randomUUID().toString() // dummy platform wallet ID
         );
     }
 
@@ -87,8 +94,9 @@ class WithdrawalServiceTest {
     @Test
     void verifyPin_ShouldThrowException_WhenPinIsNull() {
         // expect
-        PppsException exception = assertThrows(PppsException.class,
-                () -> invokeVerifyPin("123456", null));
+        PppsException exception = assertThrows(PppsException.class, () ->
+            invokeVerifyPin("123456", null)
+        );
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
         assertEquals("User PIN not set", exception.getMessage());
@@ -97,9 +105,17 @@ class WithdrawalServiceTest {
     // helper to call the private method reflectively
     private boolean invokeVerifyPin(String providedPin, String hashedPin) {
         try {
-            var method = WithdrawalService.class.getDeclaredMethod("verifyPin", String.class, String.class);
+            var method = WithdrawalService.class.getDeclaredMethod(
+                "verifyPin",
+                String.class,
+                String.class
+            );
             method.setAccessible(true);
-            return (boolean) method.invoke(withdrawalService, providedPin, hashedPin);
+            return (boolean) method.invoke(
+                withdrawalService,
+                providedPin,
+                hashedPin
+            );
         } catch (java.lang.reflect.InvocationTargetException e) {
             if (e.getCause() instanceof RuntimeException runtimeException) {
                 throw runtimeException;
