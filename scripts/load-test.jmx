@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+  <hashTree>
+    <!-- Test Plan Configuration -->
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="P2P Payment System - 250 TPS Load Test" enabled="true">
+      <stringProp name="TestPlan.comments">Load test for 250 TPS, 1 million transactions</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="BASE_URL" elementType="Argument">
+            <stringProp name="Argument.name">BASE_URL</stringProp>
+            <stringProp name="Argument.value">http://localhost:8080</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="TARGET_TPS" elementType="Argument">
+            <stringProp name="Argument.name">TARGET_TPS</stringProp>
+            <stringProp name="Argument.value">250</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="THREADS" elementType="Argument">
+            <stringProp name="Argument.name">THREADS</stringProp>
+            <stringProp name="Argument.value">500</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP" elementType="Argument">
+            <stringProp name="Argument.name">RAMP_UP</stringProp>
+            <stringProp name="Argument.value">300</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="DURATION" elementType="Argument">
+            <stringProp name="Argument.name">DURATION</stringProp>
+            <stringProp name="Argument.value">4000</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    
+    <!-- Thread Group: Constant Load -->
+    <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="250 TPS Load Test" enabled="true">
+      <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+      <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControllerGui" testclass="LoopController" testname="Loop Controller" enabled="true">
+        <boolProp name="LoopController.continue_forever">false</boolProp>
+        <stringProp name="LoopController.loops">-1</stringProp>
+      </elementProp>
+      <stringProp name="ThreadGroup.num_threads">${THREADS}</stringProp>
+      <stringProp name="ThreadGroup.ramp_time">${RAMP_UP}</stringProp>
+      <boolProp name="ThreadGroup.scheduler">true</boolProp>
+      <stringProp name="ThreadGroup.duration">${DURATION}</stringProp>
+      <stringProp name="ThreadGroup.delay"></stringProp>
+      <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+    </ThreadGroup>
+    <hashTree>
+      
+      <!-- HTTP Request Defaults -->
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
+        <elementProp name="HTTP" elementType="ConfigElement">
+          <collectionProp name="ConfigElement.arguments">
+            <elementProp name="domain" elementType="Argument">
+              <stringProp name="Argument.name">domain</stringProp>
+              <stringProp name="Argument.value">localhost</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="port" elementType="Argument">
+              <stringProp name="Argument.name">port</stringProp>
+              <stringProp name="Argument.value">8080</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="protocol" elementType="Argument">
+              <stringProp name="Argument.name">protocol</stringProp>
+              <stringProp name="Argument.value">http</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="contentEncoding" elementType="Argument">
+              <stringProp name="Argument.name">contentEncoding</stringProp>
+              <stringProp name="Argument.value">utf-8</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="connect_timeout" elementType="Argument">
+              <stringProp name="Argument.name">connect_timeout</stringProp>
+              <stringProp name="Argument.value">100</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="response_timeout" elementType="Argument">
+              <stringProp name="Argument.name">response_timeout</stringProp>
+              <stringProp name="Argument.value">500</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain"></stringProp>
+        <stringProp name="HTTPSampler.port"></stringProp>
+        <stringProp name="HTTPSampler.protocol"></stringProp>
+        <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+        <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">100</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">500</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+      
+      <!-- CSV Data Set Config for test data -->
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Data Set Config" enabled="true">
+        <stringProp name="delimiter">,</stringProp>
+        <stringProp name="fileEncoding">UTF-8</stringProp>
+        <stringProp name="filename">test-data.csv</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="variableNames">senderWalletId,receiverWalletId,amount</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+      
+      <!-- HTTP Header Manager -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">X-User-ID</stringProp>
+            <stringProp name="Header.value">load-test-${__threadNum}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+      
+      <!-- Transfer Request -->
+      <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /api/v1/transfers" enabled="true">
+        <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="" elementType="HTTPArgument">
+              <boolProp name="HTTPArgument.always_encode">false</boolProp>
+              <stringProp name="Argument.value">{"senderWalletId":"${senderWalletId}","receiverWalletId":"${receiverWalletId}","amount":${amount}}</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${BASE_URL}</stringProp>
+        <stringProp name="HTTPSampler.path">/api/v1/transfers</stringProp>
+        <stringProp name="HTTPSampler.method">POST</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+        <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+        <stringProp name="HTTPSampler.connect_timeout">100</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">500</stringProp>
+      </HTTPSamplerProxy>
+      <hashTree>
+        
+        <!-- Response Assertions -->
+        <ResponseAssertion guiclass="ResponseAssertionGui" testclass="ResponseAssertion" testname="Response Code Assertion" enabled="true">
+          <collectionProp name="Asserion.test_strings">
+            <stringProp name="687901007">200</stringProp>
+            <stringProp name="687901008">201</stringProp>
+          </collectionProp>
+          <stringProp name="ResponseAssertion.test_field">response_code</stringProp>
+          <boolProp name="ResponseAssertion.assume_success">false</boolProp>
+          <boolProp name="ResponseAssertion.test_response">false</boolProp>
+        </ResponseAssertion>
+        <hashTree/>
+        
+        <ResponseAssertion guiclass="ResponseAssertionGui" testclass="ResponseAssertion" testname="Response Time Assertion" enabled="true">
+          <collectionProp name="Asserion.test_strings">
+            <stringProp name="687901007">50</stringProp>
+          </collectionProp>
+          <stringProp name="ResponseAssertion.test_field">response_data</stringProp>
+          <boolProp name="ResponseAssertion.assume_success">false</boolProp>
+          <boolProp name="ResponseAssertion.test_response">false</boolProp>
+        </ResponseAssertion>
+        <hashTree/>
+        
+      </hashTree>
+      
+      <!-- Throughput Timer -->
+      <ConstantThroughputTimer guiclass="ConstantThroughputTimerGui" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
+        <stringProp name="ThroughputTimer.calc_mode">1</stringProp>
+        <stringProp name="ThroughputTimer.throughput">${TARGET_TPS}</stringProp>
+      </ConstantThroughputTimer>
+      <hashTree/>
+      
+    </hashTree>
+    
+    <!-- Results Tree -->
+    <ResultCollector guiclass="TableVisualizer" testclass="ResultCollector" testname="View Results in Table" enabled="true">
+      <boolProp name="ResultCollector.error_logging">false</boolProp>
+      <objProp>
+        <name>saveConfig</name>
+        <value class="SampleSaveConfiguration">
+          <time>true</time>
+          <latency>true</latency>
+          <timestampFormat">ms</timestampFormat>
+          <success>true</success>
+          <label>true</label>
+          <code>true</code>
+          <message>true</message>
+          <threadName>true</threadName>
+          <responseData>false</responseData>
+          <savingData>false</savingData>
+          <assertions>true</assertions>
+          <subresults>true</subresults>
+          <responseDataOnError>false</responseDataOnError>
+          <responseFile>false</responseFile>
+          <servletName>false</servletName>
+          <checkResponseCode>false</checkResponseCode>
+          <checkResponseSymbol>false</checkResponseSymbol>
+          <checkResponseMessage>false</checkResponseMessage>
+          <checkType>true</checkType>
+          <checkResponseTime>false</checkResponseTime>
+          <checkResponseMessage>false</checkResponseMessage>
+        </value>
+      </objProp>
+      <stringProp name="filename">load-test-results.csv</stringProp>
+    </ResultCollector>
+    <hashTree/>
+    
+    <!-- Summary Report -->
+    <SummaryReport guiclass="SummaryReportGui" testclass="SummaryReport" testname="Summary Report" enabled="true">
+      <stringProp name="SummaryReport.config">aggregate_rpt_pct1:90,aggregate_rpt_pct2:95,aggregate_rpt_pct3:99,content_charset:UTF-8,exclude_timer_rpt:false,field_names:false,aggregate_rpt_max:1000,show_zero_count:true,integration_mode:false,percentiles:90;95;99,summary_max:1000,summary_on_error:true,time_format:ms,summary_report_classname:null</stringProp>
+    </SummaryReport>
+    <hashTree/>
+    
+  </hashTree>
+</jmeterTestPlan>
